@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Boys and Girls Club</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      animation: changeBackground 20s infinite alternate;
+    }
+
+    @keyframes changeBackground {
+      0% { background-color: pink; }
+      25% { background-color: lightblue; }
+      50% { background-color: lavender; }
+      75% { background-color: peachpuff; }
+      100% { background-color: lightgreen; }
+    }
+
+    .login-background {
+      background-image: url('https://source.unsplash.com/featured/?school,children');
+      background-size: cover;
+      background-position: center;
+      padding: 60px 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: white;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      max-width: 500px;
+      margin: 20px auto;
+      border-radius: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    input[type="text"], input[type="password"], input[type="number"], textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #6200ea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .student-item {
+      background: #ffe6f0;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login and Sign-Up Section -->
+  <div id="authSection" class="login-background">
+    <h1>Boys and Girls Club</h1>
+    <h2>Motto: <em>For Christ</em></h2>
+
+    <div class="container">
+      <h3>👩‍🏫 Teacher Login / Sign Up</h3>
+
+      <label>Email or Phone:
+        <input type="text" id="contactInput" placeholder="e.g. name@gmail.com or 08012345678">
+      </label>
+      <label>Password:
+        <input type="password" id="passwordInput" placeholder="Enter password">
+      </label>
+
+      <button onclick="signup()">Sign Up</button>
+      <button onclick="login()">Log In</button>
+    </div>
+  </div>
+
+  <!-- Main Content (Student Registration) -->
+  <div id="mainContent" style="display:none;">
+    <div class="container">
+      <h3>Register Student</h3>
+      <form id="studentForm">
+        <label>Name: <input type="text" id="studentName" required></label>
+        <label>Amount Paid (₦): <input type="number" id="amountPaid" required></label>
+        <label>Talent: <textarea id="studentTalent"></textarea></label>
+        <button type="submit">Register Student</button>
+      </form>
+    </div>
+
+    <div class="container">
+      <h3>📁 Import Students from Excel</h3>
+      <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+
+    <div class="container">
+      <h3>📋 Registered Students</h3>
+      <div id="studentContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    const teachers = []; // List of teacher accounts: { contact, password }
+    const students = [];
+
+    function signup() {
+      const contact = document.getElementById('contactInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+
+      if (!contact || !password) {
+        alert("Please enter both contact and password.");
+        return;
+      }
+
+      const exists = teachers.find(t => t.contact === contact);
+      if (exists) {
+        alert("This contact is already registered. Please log in.");
+        return;
+      }
+
+      teachers.push({ contact, password });
+      alert("Sign up successful. You can now log in.");
+      clearAuthFields();
+    }
+
+    function login() {
+      const contact = document.getElementById('contactInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+
+      const teacher = teachers.find(t => t.contact === contact && t.password === password);
+      if (teacher) {
+        alert("Login successful!");
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        clearAuthFields();
+      } else {
+        alert("Invalid login credentials.");
+      }
+    }
+
+    function clearAuthFields() {
+      document.getElementById('contactInput').value = '';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    // Register individual student
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('studentName').value.trim();
+      const amount = document.getElementById('amountPaid').value.trim();
+      const talent = document.getElementById('studentTalent').value.trim();
+
+      students.push({ name, amount, talent });
+      displayStudents();
+      document.getElementById('studentForm').reset();
+    });
+
+    // Display student list
+    function displayStudents() {
+      const container = document.getElementById('studentContainer');
+      container.innerHTML = '';
+      students.forEach((s, i) => {
+        container.innerHTML += `
+          <div class="student-item">
+            <p><strong>Name:</strong> ${s.name}</p>
+            <p><strong>Amount:</strong> ₦${s.amount}</p>
+            <p><strong>Talent:</strong> ${s.talent}</p>
+          </div>
+        `;
+      });
+    }
+
+    // Handle Excel upload
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet);
+
+        json.forEach(row => {
+          const name = row.Name || "Unnamed";
+          const amount = row.Amount || 0;
+          const talent = row.Talent || "Not specified";
+          students.push({ name, amount, talent });
+        });
+
+        displayStudents();
+        alert("Students imported successfully!");
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>
+
